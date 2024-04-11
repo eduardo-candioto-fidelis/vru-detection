@@ -122,7 +122,8 @@ def main():
             if not settings.synchronous_mode:
                 synchronous_master = True
                 settings.synchronous_mode = True
-                settings.fixed_delta_seconds = 0.05
+                #settings.fixed_delta_seconds = 0.05
+                settings.fixed_delta_seconds = 0.3
                 world.apply_settings(settings)
             else:
                 synchronous_master = False
@@ -306,6 +307,23 @@ def main():
                     #print(current_location)
             else:
                 world.wait_for_tick()
+                for i in range(0, len(all_id), 2):
+                    if i in concluded_ids:
+                        continue
+                    current_location = all_actors[i].get_location()
+                    #print(current_location.distance(destination))
+                    actor_destination = destination_actors[i]
+                    if current_location.distance(actor_destination) <= 3.0:
+                        #print(all_actors[i])
+                        if actor_destination == destination1:
+                            #print(1)
+                            new_destination = destination2
+                        elif actor_destination == destination2:
+                            #print(2)
+                            new_destination = destination1
+                        all_actors[i].go_to_location(new_destination)
+                        concluded_ids.append(i)
+                    #print(current_location)
 
     finally:
 
