@@ -14,6 +14,9 @@ import glob
 import os
 import sys
 
+import pygame
+import cv2
+
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
         sys.version_info.major,
@@ -26,6 +29,8 @@ import carla
 
 from carla import VehicleLightState as vls
 
+from BoundingBoxes import ClientSideBoundingBoxes
+
 import argparse
 import random
 import time
@@ -33,6 +38,8 @@ import logging
 from queue import Queue
 from queue import Empty
 from matplotlib import cm
+
+import matplotlib.pyplot as plt
 
 try:
     import numpy as np
@@ -331,7 +338,7 @@ def spawn_crossing_npcs(args):
         # all_actors[i].go_to_location(world.get_random_location_from_navigation())
         #print(world.get_random_location_from_navigation())
         current_location = all_actors[i].get_location()
-        #import code; code.interact(local=locals())
+        
         if current_location.x > 0:
             all_actors[i].go_to_location(destination1)
             destination_actors.append(destination1)
@@ -369,6 +376,7 @@ def update_npcs_path(all_id,
                     vehicles_list,
                     walkers_list):
     for i in range(0, len(all_id), 2):
+        #import code; code.interact(local=locals())
         if i in concluded_ids:
             continue
         current_location = all_actors[i].get_location()
@@ -610,6 +618,8 @@ def read_lidar(args, frame,
                 v_coord[i]-args.dot_extent : v_coord[i]+args.dot_extent,
                 u_coord[i]-args.dot_extent : u_coord[i]+args.dot_extent] = color_map[i]
 
+    return im_array
+
     # Save the image using Pillow module.
     image = Image.fromarray(im_array)
     image.save("_out/%08d.png" % image_data.frame)
@@ -627,7 +637,122 @@ def delete_lidar(args, frame,
         camera.destroy()
     if lidar:
         lidar.destroy()   
+
+'''
+def setup_pygame(image_queue, lidar_queue,
+                 lidar, camera,
+                 K,
+                 image_w, image_h,
+                 VID_RANGE, VIRIDIS):
+    pygame.init()
+    screen = pygame.display.set_mode((image_w, image_h), pygame.HWSURFACE | pygame.DOUBLEBUF)
+    return screen
+
+
+def update_pygame(screen, im_array):
+    if im_array is not None:
+        print(im_array.shape)
+        surface = pygame.surfarray.make_surface(im_array.swapaxes(0, 1))
+        screen.blit(surface, (0, 0))
+        pygame.display.update()
+'''
+
+
+def show_frame(im_array):
+    cv2.imshow('Frames', cv2.cvtColor(im_array, cv2.COLOR_RGB2BGR ))
+    cv2.waitKey(1)
     
+
+def to_lidar_coordinate(loc, w2l):
+    # Format the input coordinate (loc is a carla.Position object)
+    point = np.array([loc.x, loc.y, loc.z, 1])
+    # transform to camera coordinates
+    point_lidar = np.dot(w2l, point)
+
+    return point_lidar
+    
+
+def get_image_point(point_lidar, K):
+    # New we must change from UE4's coordinate system to an "standard"
+    # (x, y ,z) -> (y, -z, x)
+    # and we remove the fourth componebonent also
+    point_lidar = [point_lidar[1], -point_lidar[2], point_lidar[0]]
+
+    # now project 3D->2D using the lidar matrix
+    point_img = np.dot(K, point_lidar)
+
+    # normalize
+    point_img[0] /= point_img[2]
+    point_img[1] /= point_img[2]
+
+    return point_img[0:2]
+
+
+def draw_bounding_boxes(im_array, pedestrians_bb,
+                        image_queue, lidar_queue,
+                        lidar, camera,
+                        K,
+                        image_w, image_h,
+                        VID_RANGE, VIRIDIS):
+    '''
+    Esta função é baseada no tutorial: https://carla.readthedocs.io/en/latest/tuto_G_bounding_boxes/.
+    '''
+    global edges
+    edges = [[0,1], [1,3], [3,2], [2,0], [0,4], [4,5], [5,1], [5,7], [7,6], [6,4], [6,2], [7,3]]
+
+    im_array = im_array.copy().astype('uint8')
+
+    world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+
+    for pedestrian in pedestrians_bb:
+        for edge in edges:
+            p1 = get_image_point(pedestrian[edge[0]], K)
+            p2 = get_image_point(pedestrian[edge[1]],  K)
+            cv2.line(im_array, (int(p1[0]),int(p1[1])), (int(p2[0]),int(p2[1])), (0,0,255), 1)
+
+    return im_array
+
+
+def get_bounding_boxes(im_array,
+                        image_queue, lidar_queue,
+                        lidar, camera,
+                        K,
+                        image_w, image_h,
+                        VID_RANGE, VIRIDIS):
+    '''
+    Esta função é baseada no tutorial: https://carla.readthedocs.io/en/latest/tuto_G_bounding_boxes/.
+    '''
+    global edges
+    edges = [[0,1], [1,3], [3,2], [2,0], [0,4], [4,5], [5,1], [5,7], [7,6], [6,4], [6,2], [7,3]]
+
+    im_array = im_array.copy().astype('uint8')
+
+    world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+
+    pedestrians_bb = []
+
+    for pedestrian in world.get_actors().filter('walker.pedestrian.*'):
+        bb = pedestrian.bounding_box
+        dist = pedestrian.get_transform().location.distance(lidar.get_transform().location)
+
+        # Filter for the vehicles within 50m
+        if dist < 50:
+
+        # Calculate the dot product between the forward vector
+        # of the vehicle and the vector between the vehicle
+        # and the other vehicle. We threshold this dot product
+        # to limit to drawing bounding boxes IN FRONT OF THE CAMERA
+            forward_vec = lidar.get_transform().get_forward_vector()
+            forward_aray = np.array([[forward_vec.x], [forward_vec.y], [forward_vec.z]])
+            ray = pedestrian.get_transform().location - lidar.get_transform().location
+            ray_array = np.array([[ray.x], [ray.y], [ray.z]])
+            
+            if forward_aray.T.dot(ray_array) > 1:
+                verts = [v for v in bb.get_world_vertices(pedestrian.get_transform())]
+                verts_lidar = [to_lidar_coordinate(v, world_2_lidar) for v in verts]
+                pedestrians_bb.append(verts_lidar)
+
+    return pedestrians_bb
     
 
 def main():
@@ -638,8 +763,12 @@ def main():
         frame = 0
         while True:
             world.tick()
-            read_lidar(args, frame, *lidar_info)
+            im_array = read_lidar(args, frame, *lidar_info)
             update_npcs_path(*npcs_info)
+            if im_array is not None:
+                pedestrians_bb = get_bounding_boxes(im_array, *lidar_info)
+                im_array = draw_bounding_boxes(im_array, pedestrians_bb, *lidar_info)
+                show_frame(im_array)
             frame += 1
     finally:
         delete_lidar(args, frame, *lidar_info)
