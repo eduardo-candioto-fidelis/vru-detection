@@ -14,7 +14,6 @@ import glob
 import os
 import sys
 
-import pygame
 import cv2
 
 try:
@@ -28,8 +27,6 @@ except IndexError:
 import carla
 
 from carla import VehicleLightState as vls
-
-from BoundingBoxes import ClientSideBoundingBoxes
 
 import argparse
 import random
@@ -520,6 +517,8 @@ def read_lidar(args, frame,
     im_array = np.reshape(im_array, (image_data.height, image_data.width, 4))
     im_array = im_array[:, :, :3][:, :, ::-1]
 
+    image = im_array.copy()
+
     # Get the lidar data and convert it to a numpy array.
     p_cloud_size = len(lidar_data)
     p_cloud = np.copy(np.frombuffer(lidar_data.raw_data, dtype=np.dtype('f4')))
@@ -536,7 +535,7 @@ def read_lidar(args, frame,
     # shape (4, p_cloud_size) and it can be multiplied by a (4, 4) matrix.
     local_lidar_points = np.r_[
         local_lidar_points, [np.ones(local_lidar_points.shape[1])]]
-
+    
     # This (4, 4) matrix transforms the points from lidar space to world space.
     lidar_2_world = lidar.get_transform().get_matrix()
 
@@ -618,11 +617,7 @@ def read_lidar(args, frame,
                 v_coord[i]-args.dot_extent : v_coord[i]+args.dot_extent,
                 u_coord[i]-args.dot_extent : u_coord[i]+args.dot_extent] = color_map[i]
 
-    return im_array
-
-    # Save the image using Pillow module.
-    image = Image.fromarray(im_array)
-    image.save("_out/%08d.png" % image_data.frame)
+    return im_array, p_cloud, image
 
 
 def delete_lidar(args, frame,
@@ -638,25 +633,6 @@ def delete_lidar(args, frame,
     if lidar:
         lidar.destroy()   
 
-'''
-def setup_pygame(image_queue, lidar_queue,
-                 lidar, camera,
-                 K,
-                 image_w, image_h,
-                 VID_RANGE, VIRIDIS):
-    pygame.init()
-    screen = pygame.display.set_mode((image_w, image_h), pygame.HWSURFACE | pygame.DOUBLEBUF)
-    return screen
-
-
-def update_pygame(screen, im_array):
-    if im_array is not None:
-        print(im_array.shape)
-        surface = pygame.surfarray.make_surface(im_array.swapaxes(0, 1))
-        screen.blit(surface, (0, 0))
-        pygame.display.update()
-'''
-
 
 def show_frame(im_array):
     cv2.imshow('Frames', cv2.cvtColor(im_array, cv2.COLOR_RGB2BGR ))
@@ -666,7 +642,7 @@ def show_frame(im_array):
 def to_lidar_coordinate(loc, w2l):
     # Format the input coordinate (loc is a carla.Position object)
     point = np.array([loc.x, loc.y, loc.z, 1])
-    # transform to camera coordinates
+    # transform to lidar coordinates
     point_lidar = np.dot(w2l, point)
 
     return point_lidar
@@ -701,8 +677,6 @@ def draw_bounding_boxes(im_array, pedestrians_bb,
     edges = [[0,1], [1,3], [3,2], [2,0], [0,4], [4,5], [5,1], [5,7], [7,6], [6,4], [6,2], [7,3]]
 
     im_array = im_array.copy().astype('uint8')
-
-    world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
 
     for pedestrian in pedestrians_bb:
         for edge in edges:
@@ -755,7 +729,22 @@ def get_bounding_boxes(im_array,
     return pedestrians_bb
     
 
+def create_dataset_dir(name):
+    os.mkdir(f'./{name}')
+    os.mkdir(f'./{name}/images/')
+    os.mkdir(f'./{name}/point_clouds/')
+    os.mkdir(f'./{name}/bounding_boxes/')
+
+
+def store_in_dataset(frame, name, image, p_cloud, pedestrians_bb):
+    cv2.imwrite(f'./{name}/images/img-{frame:05d}.png', image)
+    np.save(f'./{name}/point_clouds/pc-{frame:05d}.npy', p_cloud)
+    np.save(f'./{name}/bounding_boxes/bb-{frame:05d}.npy', pedestrians_bb)
+    
+
 def main():
+    name = 'dataset'
+    create_dataset_dir(name)
     args = get_args()
     npcs_info = spawn_crossing_npcs(args)
     lidar_info = setup_lidar(args)
@@ -763,12 +752,13 @@ def main():
         frame = 0
         while True:
             world.tick()
-            im_array = read_lidar(args, frame, *lidar_info)
+            im_array, p_cloud, image = read_lidar(args, frame, *lidar_info)
             update_npcs_path(*npcs_info)
             if im_array is not None:
                 pedestrians_bb = get_bounding_boxes(im_array, *lidar_info)
                 im_array = draw_bounding_boxes(im_array, pedestrians_bb, *lidar_info)
                 show_frame(im_array)
+                store_in_dataset(frame, name, image, p_cloud, pedestrians_bb)
             frame += 1
     finally:
         delete_lidar(args, frame, *lidar_info)
