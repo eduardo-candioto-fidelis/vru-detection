@@ -447,7 +447,7 @@ def setup_lidar(args):
 
     # Spawn the blueprints
     transform = carla.Transform(location=carla.Location(x=-9, y=-178, z=5),
-                                rotation=carla.Rotation(pitch=-10, yaw=-50, roll=0))
+                                rotation=carla.Rotation(pitch=-30, yaw=-50, roll=0))
     camera = world.spawn_actor(
         blueprint=camera_bp,
         transform=transform)
@@ -639,7 +639,7 @@ def show_frame(im_array):
     cv2.waitKey(1)
     
 
-def to_lidar_coordinate(loc, w2l):
+def to_other_coordinate(loc, w2l):
     # Format the input coordinate (loc is a carla.Position object)
     point = np.array([loc.x, loc.y, loc.z, 1])
     # transform to lidar coordinates
@@ -664,29 +664,6 @@ def get_image_point(point_lidar, K):
     return point_img[0:2]
 
 
-def draw_bounding_boxes(im_array, pedestrians_bb,
-                        image_queue, lidar_queue,
-                        lidar, camera,
-                        K,
-                        image_w, image_h,
-                        VID_RANGE, VIRIDIS):
-    '''
-    Esta função é baseada no tutorial: https://carla.readthedocs.io/en/latest/tuto_G_bounding_boxes/.
-    '''
-    global edges
-    edges = [[0,1], [1,3], [3,2], [2,0], [0,4], [4,5], [5,1], [5,7], [7,6], [6,4], [6,2], [7,3]]
-
-    im_array = im_array.copy().astype('uint8')
-
-    for pedestrian in pedestrians_bb:
-        for edge in edges:
-            p1 = get_image_point(pedestrian[edge[0]], K)
-            p2 = get_image_point(pedestrian[edge[1]],  K)
-            cv2.line(im_array, (int(p1[0]),int(p1[1])), (int(p2[0]),int(p2[1])), (0,0,255), 1)
-
-    return im_array
-
-
 def get_bounding_boxes(im_array,
                         image_queue, lidar_queue,
                         lidar, camera,
@@ -701,9 +678,10 @@ def get_bounding_boxes(im_array,
 
     im_array = im_array.copy().astype('uint8')
 
-    world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+    #world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+    
 
-    pedestrians_bb = []
+    pedestrians_verts = []
 
     for pedestrian in world.get_actors().filter('walker.pedestrian.*'):
         bb = pedestrian.bounding_box
@@ -723,10 +701,49 @@ def get_bounding_boxes(im_array,
             
             if forward_aray.T.dot(ray_array) > 1:
                 verts = [v for v in bb.get_world_vertices(pedestrian.get_transform())]
-                verts_lidar = [to_lidar_coordinate(v, world_2_lidar) for v in verts]
-                pedestrians_bb.append(verts_lidar)
+                #verts_lidar = [to_lidar_coordinate(v, world_2_lidar) for v in verts]
+                pedestrians_verts.append(verts)
 
-    return pedestrians_bb
+    return pedestrians_verts    
+
+
+def draw_bounding_boxes(im_array, pedestrians_verts,
+                        image_queue, lidar_queue,
+                        lidar, camera,
+                        K,
+                        image_w, image_h,
+                        VID_RANGE, VIRIDIS):
+    '''
+    Esta função é baseada no tutorial: https://carla.readthedocs.io/en/latest/tuto_G_bounding_boxes/.
+    '''
+    global edges
+    edges = [[0,1], [1,3], [3,2], [2,0], [0,4], [4,5], [5,1], [5,7], [7,6], [6,4], [6,2], [7,3]]
+
+    im_array = im_array.copy().astype('uint8')
+
+    world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+
+    for verts in pedestrians_verts:
+        verts_lidar = [to_other_coordinate(v, world_2_lidar) for v in verts]
+        for edge in edges:
+            p1 = get_image_point(verts_lidar[edge[0]], K)
+            p2 = get_image_point(verts_lidar[edge[1]],  K)
+            cv2.line(im_array, (int(p1[0]),int(p1[1])), (int(p2[0]),int(p2[1])), (0,0,255), 1)
+
+    return im_array
+
+
+def get_lidar_no_inclination(pedestrians_verts):
+    world_2_lidar_noincli = np.array(
+        carla.Transform(location=carla.Location(x=-9, y=-178, z=5)).get_inverse_matrix()
+    )
+
+    pedestrians_bb = []
+    for verts in pedestrians_verts:
+        verts_noincli = [to_other_coordinate(v, world_2_lidar_noincli) for v in verts]
+        pedestrians_bb.append(verts_noincli)
+    return pedestrians_bb, world_2_lidar_noincli
+
     
 
 def create_dataset_dir(name):
@@ -736,10 +753,14 @@ def create_dataset_dir(name):
     os.mkdir(f'./{name}/bounding_boxes/')
 
 
-def store_in_dataset(frame, name, image, p_cloud, pedestrians_bb):
+def store_in_dataset(frame, name, image, p_cloud, 
+                     pedestrians_bb, transformation):
     cv2.imwrite(f'./{name}/images/img-{frame:05d}.png', image)
     np.save(f'./{name}/point_clouds/pc-{frame:05d}.npy', p_cloud)
     np.save(f'./{name}/bounding_boxes/bb-{frame:05d}.npy', pedestrians_bb)
+    if not os.path.exists(f'./{name}/metadata/'):
+        os.mkdir(f'./{name}/metadata/')
+        np.save(f'./{name}/metadata/transformation-matrix.npy', transformation)
     
 
 def main():
@@ -755,10 +776,11 @@ def main():
             im_array, p_cloud, image = read_lidar(args, frame, *lidar_info)
             update_npcs_path(*npcs_info)
             if im_array is not None:
-                pedestrians_bb = get_bounding_boxes(im_array, *lidar_info)
-                im_array = draw_bounding_boxes(im_array, pedestrians_bb, *lidar_info)
+                pedestrians_verts = get_bounding_boxes(im_array, *lidar_info)
+                im_array = draw_bounding_boxes(im_array, pedestrians_verts, *lidar_info)
                 show_frame(im_array)
-                store_in_dataset(frame, name, image, p_cloud, pedestrians_bb)
+                pedestrians_bb, transformation = get_lidar_no_inclination(pedestrians_verts)
+                store_in_dataset(frame, name, image, p_cloud, pedestrians_bb, transformation)
             frame += 1
     finally:
         delete_lidar(args, frame, *lidar_info)
