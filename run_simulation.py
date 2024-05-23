@@ -678,10 +678,10 @@ def get_bounding_boxes(im_array,
 
     im_array = im_array.copy().astype('uint8')
 
-    #world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+    world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
     
 
-    pedestrians_verts = []
+    pedestrians_verts, pedestrians_bb = [], []
 
     for pedestrian in world.get_actors().filter('walker.pedestrian.*'):
         bb = pedestrian.bounding_box
@@ -689,11 +689,10 @@ def get_bounding_boxes(im_array,
 
         # Filter for the vehicles within 50m
         if dist < 50:
-
-        # Calculate the dot product between the forward vector
-        # of the vehicle and the vector between the vehicle
-        # and the other vehicle. We threshold this dot product
-        # to limit to drawing bounding boxes IN FRONT OF THE CAMERA
+            # Calculate the dot product between the forward vector
+            # of the vehicle and the vector between the vehicle
+            # and the other vehicle. We threshold this dot product
+            # to limit to drawing bounding boxes IN FRONT OF THE CAMERA
             forward_vec = lidar.get_transform().get_forward_vector()
             forward_aray = np.array([[forward_vec.x], [forward_vec.y], [forward_vec.z]])
             ray = pedestrian.get_transform().location - lidar.get_transform().location
@@ -701,10 +700,11 @@ def get_bounding_boxes(im_array,
             
             if forward_aray.T.dot(ray_array) > 1:
                 verts = [v for v in bb.get_world_vertices(pedestrian.get_transform())]
-                #verts_lidar = [to_lidar_coordinate(v, world_2_lidar) for v in verts]
-                pedestrians_verts.append(verts)
+                verts_lidar = [to_other_coordinate(v, world_2_lidar) for v in verts]
+                pedestrians_verts.append(verts_lidar)
+                pedestrians_bb.append(pedestrian)
 
-    return pedestrians_verts    
+    return pedestrians_verts, pedestrians_bb   
 
 
 def draw_bounding_boxes(im_array, pedestrians_verts,
@@ -721,46 +721,82 @@ def draw_bounding_boxes(im_array, pedestrians_verts,
 
     im_array = im_array.copy().astype('uint8')
 
-    world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+    #world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
 
     for verts in pedestrians_verts:
-        verts_lidar = [to_other_coordinate(v, world_2_lidar) for v in verts]
+        #verts_lidar = [to_other_coordinate(v, world_2_lidar) for v in verts]
         for edge in edges:
-            p1 = get_image_point(verts_lidar[edge[0]], K)
-            p2 = get_image_point(verts_lidar[edge[1]],  K)
+            p1 = get_image_point(verts[edge[0]], K)
+            p2 = get_image_point(verts[edge[1]],  K)
             cv2.line(im_array, (int(p1[0]),int(p1[1])), (int(p2[0]),int(p2[1])), (0,0,255), 1)
 
     return im_array
 
 
-def get_lidar_no_inclination(pedestrians_verts):
-    world_2_lidar_noincli = np.array(
-        carla.Transform(location=carla.Location(x=-9, y=-178, z=5)).get_inverse_matrix()
+def transform_point_cloud(p_cloud):
+    to_no_inclination = np.array(
+        carla.Transform(rotation=carla.Rotation(pitch=30)).get_inverse_matrix()
+        
     )
+    len_p_cloud = p_cloud.shape[0]
+    new_p_cloud = np.concatenate((p_cloud[:, :3], np.ones((len_p_cloud, 1))), axis=1)
+    new_p_cloud = np.dot(to_no_inclination, new_p_cloud.T)
+    p_cloud[:, :3] = new_p_cloud.T[:, :3]
+    return p_cloud
+    
 
-    pedestrians_bb = []
-    for verts in pedestrians_verts:
-        verts_noincli = [to_other_coordinate(v, world_2_lidar_noincli) for v in verts]
-        pedestrians_bb.append(verts_noincli)
-    return pedestrians_bb, world_2_lidar_noincli
-
+def save_frame(frame, im_array):
+    cv2.imwrite(f'images/{frame:05d}.png', cv2.cvtColor(im_array, cv2.COLOR_BGR2RGB))
     
 
 def create_dataset_dir(name):
     os.mkdir(f'./{name}')
-    os.mkdir(f'./{name}/images/')
-    os.mkdir(f'./{name}/point_clouds/')
-    os.mkdir(f'./{name}/bounding_boxes/')
+    #os.mkdir(f'./{name}/images/')
+    os.mkdir(f'./{name}/points/')
+    os.mkdir(f'./{name}/labels/')
+    #os.mkdir(f'./{name}/labels2/')
+    os.mkdir(f'./{name}/ImageSets/')
+    #with open(f'./{name}/ImageSets/train.txt', 'w') as fp:
+    #    fp.write('teste')
 
 
-def store_in_dataset(frame, name, image, p_cloud, 
-                     pedestrians_bb, transformation):
-    cv2.imwrite(f'./{name}/images/img-{frame:05d}.png', image)
-    np.save(f'./{name}/point_clouds/pc-{frame:05d}.npy', p_cloud)
-    np.save(f'./{name}/bounding_boxes/bb-{frame:05d}.npy', pedestrians_bb)
-    if not os.path.exists(f'./{name}/metadata/'):
-        os.mkdir(f'./{name}/metadata/')
-        np.save(f'./{name}/metadata/transformation-matrix.npy', transformation)
+def store_in_dataset(frame, name, image, p_cloud, pedestrians,
+                     image_queue, lidar_queue,
+                     lidar, camera,
+                     K,
+                     image_w, image_h,
+                     VID_RANGE, VIRIDIS):
+    
+    world_2_lidar = np.array(
+        carla.Transform(location=carla.Location(x=-9, y=-178, z=5),
+                        rotation=carla.Rotation(yaw=-50, roll=0)).get_inverse_matrix()
+    )
+
+    #cv2.imwrite(f'./{name}/images/{frame:06d}.png', image)
+    p_cloud = transform_point_cloud(p_cloud)
+    np.save(f'./{name}/points/{frame:06d}.npy', p_cloud)
+    with open(f'./{name}/labels/{frame:06d}.txt', 'w') as fp:
+        for p in pedestrians:
+            p_lidar_location = to_other_coordinate(p.get_transform().location, 
+                                                   world_2_lidar)
+            bb_values = [
+                p_lidar_location[0],
+                p_lidar_location[1],
+                p_lidar_location[2],
+                p.bounding_box.extent.x * 2,
+                p.bounding_box.extent.y * 2,
+                p.bounding_box.extent.z * 2,
+                p.bounding_box.rotation.yaw,
+                'Pedestrian',
+                '\n'
+            ]
+            fp.write(' '.join(map(str, bb_values)))
+    #np.save(f'./{name}/labels2/{frame:06d}.npy', np.array(pedestrians_bb)[:, [2, 6]])
+    with open(f'./{name}/ImageSets/train.txt', 'a') as fp:
+        fp.write(f'{frame:06d}\n')
+    #if not os.path.exists(f'./{name}/metadata/'):
+        #os.mkdir(f'./{name}/metadata/')
+        #np.save(f'./{name}/metadata/transformation-matrix.npy', transformation)
     
 
 def main():
@@ -776,11 +812,11 @@ def main():
             im_array, p_cloud, image = read_lidar(args, frame, *lidar_info)
             update_npcs_path(*npcs_info)
             if im_array is not None:
-                pedestrians_verts = get_bounding_boxes(im_array, *lidar_info)
+                pedestrians_verts, pedestrians_bb = get_bounding_boxes(im_array, *lidar_info)
                 im_array = draw_bounding_boxes(im_array, pedestrians_verts, *lidar_info)
                 show_frame(im_array)
-                pedestrians_bb, transformation = get_lidar_no_inclination(pedestrians_verts)
-                store_in_dataset(frame, name, image, p_cloud, pedestrians_bb, transformation)
+                save_frame(frame, im_array)
+                store_in_dataset(frame, name, image, p_cloud, pedestrians_bb, *lidar_info)
             frame += 1
     finally:
         delete_lidar(args, frame, *lidar_info)
