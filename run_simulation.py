@@ -68,6 +68,25 @@ world.apply_settings(settings)
 
 synchronous_master = False
 
+t_sensors = {
+    'x': 4,
+    'y': -175,
+    'z': 7,
+    'pitch': -35,
+    'yaw': -88,
+    'roll': 0,
+}
+
+#t_sensors = {
+#    'x': -9,
+#    'y': -178,
+#    'z': 5,
+#    'pitch': -30,
+#    'yaw': -50,
+#    'roll': 0,
+#}
+
+
 def get_args():
     argparser = argparse.ArgumentParser(
         description=__doc__)
@@ -446,8 +465,10 @@ def setup_lidar(args):
     lidar_bp.set_attribute('rotation_frequency', str(args.points_per_second))
 
     # Spawn the blueprints
-    transform = carla.Transform(location=carla.Location(x=-9, y=-178, z=5),
-                                rotation=carla.Rotation(pitch=-30, yaw=-50, roll=0))
+    transform = carla.Transform(
+        location=carla.Location(x=t_sensors['x'], y=t_sensors['y'], z=t_sensors['z']),
+        rotation=carla.Rotation(pitch=t_sensors['pitch'], yaw=t_sensors['yaw'], roll=t_sensors['roll'])
+    )
     camera = world.spawn_actor(
         blueprint=camera_bp,
         transform=transform)
@@ -734,14 +755,18 @@ def draw_bounding_boxes(im_array, pedestrians_verts,
 
 
 def transform_point_cloud(p_cloud):
+    # Remove inclination from point cloud.
     to_no_inclination = np.array(
-        carla.Transform(rotation=carla.Rotation(pitch=30)).get_inverse_matrix()
-        
+        carla.Transform(rotation=carla.Rotation(pitch=-t_sensors['pitch'])).get_inverse_matrix()
     )
     len_p_cloud = p_cloud.shape[0]
     new_p_cloud = np.concatenate((p_cloud[:, :3], np.ones((len_p_cloud, 1))), axis=1)
     new_p_cloud = np.dot(to_no_inclination, new_p_cloud.T)
     p_cloud[:, :3] = new_p_cloud.T[:, :3]
+
+    # Convert to 3D Universel coordinate
+    p_cloud[:, 1] = -p_cloud[:, 1]
+
     return p_cloud
     
 
@@ -768,8 +793,10 @@ def store_in_dataset(frame, name, image, p_cloud, pedestrians,
                      VID_RANGE, VIRIDIS):
     
     world_2_lidar = np.array(
-        carla.Transform(location=carla.Location(x=-9, y=-178, z=5),
-                        rotation=carla.Rotation(yaw=-50, roll=0)).get_inverse_matrix()
+        carla.Transform(
+            location=carla.Location(x=t_sensors['x'], y=t_sensors['y'], z=t_sensors['z']),
+            rotation=carla.Rotation(pitch=0, yaw=t_sensors['yaw'], roll=t_sensors['roll'])
+        ).get_inverse_matrix()
     )
 
     #cv2.imwrite(f'./{name}/images/{frame:06d}.png', image)
@@ -781,7 +808,7 @@ def store_in_dataset(frame, name, image, p_cloud, pedestrians,
                                                    world_2_lidar)
             bb_values = [
                 p_lidar_location[0],
-                p_lidar_location[1],
+                -p_lidar_location[1],
                 p_lidar_location[2],
                 p.bounding_box.extent.x * 2,
                 p.bounding_box.extent.y * 2,
