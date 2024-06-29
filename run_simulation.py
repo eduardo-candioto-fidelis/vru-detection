@@ -700,13 +700,17 @@ def get_bounding_boxes(im_array,
     im_array = im_array.copy().astype('uint8')
 
     world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
-    
 
-    pedestrians_verts, pedestrians_bb = [], []
+    objects_verts, objects_bb, objects_labels = [], [], []
 
-    for pedestrian in world.get_actors().filter('walker.pedestrian.*'):
-        bb = pedestrian.bounding_box
-        dist = pedestrian.get_transform().location.distance(lidar.get_transform().location)
+    pedestrians = list(world.get_actors().filter('walker.pedestrian.*'))
+    vehicles = list(world.get_actors().filter('vehicle.*'))
+    objects = pedestrians + vehicles
+    objects_types = len(pedestrians)*['Pedestrian'] + len(vehicles)*['Car']
+
+    for object, o_type in zip(objects, objects_types):
+        bb = object.bounding_box
+        dist = object.get_transform().location.distance(lidar.get_transform().location)
 
         # Filter for the vehicles within 50m
         if dist < 50:
@@ -716,16 +720,17 @@ def get_bounding_boxes(im_array,
             # to limit to drawing bounding boxes IN FRONT OF THE CAMERA
             forward_vec = lidar.get_transform().get_forward_vector()
             forward_aray = np.array([[forward_vec.x], [forward_vec.y], [forward_vec.z]])
-            ray = pedestrian.get_transform().location - lidar.get_transform().location
+            ray = object.get_transform().location - lidar.get_transform().location
             ray_array = np.array([[ray.x], [ray.y], [ray.z]])
             
             if forward_aray.T.dot(ray_array) > 1:
-                verts = [v for v in bb.get_world_vertices(pedestrian.get_transform())]
+                verts = [v for v in bb.get_world_vertices(object.get_transform())]
                 verts_lidar = [to_other_coordinate(v, world_2_lidar) for v in verts]
-                pedestrians_verts.append(verts_lidar)
-                pedestrians_bb.append(pedestrian)
+                objects_verts.append(verts_lidar)
+                objects_bb.append(object)
+                objects_labels.append(o_type)
 
-    return pedestrians_verts, pedestrians_bb   
+    return objects_verts, objects_bb, objects_labels  
 
 
 def draw_bounding_boxes(im_array, pedestrians_verts,
@@ -785,7 +790,7 @@ def create_dataset_dir(name):
     #    fp.write('teste')
 
 
-def store_in_dataset(frame, name, image, p_cloud, pedestrians,
+def store_in_dataset(frame, name, image, p_cloud, objects, objects_labels,
                      image_queue, lidar_queue,
                      lidar, camera,
                      K,
@@ -803,18 +808,18 @@ def store_in_dataset(frame, name, image, p_cloud, pedestrians,
     p_cloud = transform_point_cloud(p_cloud)
     np.save(f'./{name}/points/{frame:06d}.npy', p_cloud)
     with open(f'./{name}/labels/{frame:06d}.txt', 'w') as fp:
-        for p in pedestrians:
-            p_lidar_location = to_other_coordinate(p.get_transform().location, 
+        for o, ol in zip(objects, objects_labels):
+            o_lidar_location = to_other_coordinate(o.get_transform().location, 
                                                    world_2_lidar)
             bb_values = [
-                p_lidar_location[0],
-                -p_lidar_location[1],
-                p_lidar_location[2],
-                p.bounding_box.extent.x * 2,
-                p.bounding_box.extent.y * 2,
-                p.bounding_box.extent.z * 2,
-                p.bounding_box.rotation.yaw,
-                'Pedestrian',
+                o_lidar_location[0],
+                -o_lidar_location[1],
+                o_lidar_location[2],
+                o.bounding_box.extent.x * 2,
+                o.bounding_box.extent.y * 2,
+                o.bounding_box.extent.z * 2,
+                o.bounding_box.rotation.yaw,
+                ol,
                 '\n'
             ]
             fp.write(' '.join(map(str, bb_values)))
@@ -839,11 +844,11 @@ def main():
             im_array, p_cloud, image = read_lidar(args, frame, *lidar_info)
             update_npcs_path(*npcs_info)
             if im_array is not None:
-                pedestrians_verts, pedestrians_bb = get_bounding_boxes(im_array, *lidar_info)
-                im_array = draw_bounding_boxes(im_array, pedestrians_verts, *lidar_info)
+                objects_verts, objects_bb, objects_labels = get_bounding_boxes(im_array, *lidar_info)
+                im_array = draw_bounding_boxes(im_array, objects_verts, *lidar_info)
                 show_frame(im_array)
                 save_frame(frame, im_array)
-                store_in_dataset(frame, name, image, p_cloud, pedestrians_bb, *lidar_info)
+                store_in_dataset(frame, name, image, p_cloud, objects_bb, objects_labels, *lidar_info)
             frame += 1
     finally:
         delete_lidar(args, frame, *lidar_info)
