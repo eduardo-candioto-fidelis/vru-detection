@@ -2,7 +2,7 @@ import numpy as np
 import open3d as o3d
 
 # Load point cloud data from npy file
-point_cloud_data = np.load('dataset/points/000081.npy')
+point_cloud_data = np.load('dataset/points/000100.npy')
 points = point_cloud_data[:, :3]  # Extract x, y, z coordinates
 
 # Create an Open3D point cloud object
@@ -18,7 +18,7 @@ pcd.colors = o3d.utility.Vector3dVector(colors)
 
 # Load bounding boxes from txt file
 bounding_boxes = []
-with open('dataset/labels/000081.txt', 'r') as f:
+with open('dataset/labels/000100.txt', 'r') as f:
     for line in f:
         data = line.strip().split()
         x, y, z, dx, dy, dz, heading_angle, category_name = data[:8]

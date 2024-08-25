@@ -55,6 +55,10 @@ client.set_timeout(2.0)
 world = client.get_world()
 bp_lib = world.get_blueprint_library()
 
+# Get the current map name
+map_name = world.get_map().name
+print(f"The current map is: {map_name}")
+
 traffic_manager = client.get_trafficmanager(8000)
 traffic_manager.set_synchronous_mode(True)
 traffic_manager.set_global_distance_to_leading_vehicle(1.0)
@@ -85,6 +89,44 @@ t_sensors = {
 #    'yaw': -50,
 #    'roll': 0,
 #}
+
+cars_ids = [
+    "vehicle.bmw.grandtourer",
+    "vehicle.bmw.isetta",
+    "vehicle.carlamotors.carlacola",
+    "vehicle.mercedesccc.mercedesccc",
+    "vehicle.chevrolet.impala",
+    "vehicle.chargercop2020.chargercop2020",
+    "vehicle.citroen.c3",
+    "vehicle.dodge_charger.police",
+    "vehicle.jeep.wrangler_rubicon",
+    "vehicle.mercedes-benz.coupe",
+    "vehicle.mini.cooperst",
+    "vehicle.nissan.patrol",
+    "vehicle.seat.leon",
+    "vehicle.toyota.prius",
+    "vehicle.tesla.cybertruck",
+    "vehicle.audi.etron",
+    "vehicle.tesla.model3",
+    "vehicle.volkswagen.t2",
+    "vehicle.lincoln.mkz2017",
+    "vehicle.mustang.mustang",
+    "vehicle.lincoln2020.mkz2020",
+    "vehicle.charger2020.charger2020"
+]
+
+motorcycles_ids = [
+    'vehicle.harley-davidson.low_rider',
+    'vehicle.yamaha.yzf',
+    'vehicle.kawasaki.ninja'
+]
+
+bicycles_ids = [
+    "vehicle.bh.crossbike",
+    "vehicle.gazelle.omafiets",
+    "vehicle.diamondback.century"
+]
+
 
 
 def get_args():
@@ -501,6 +543,7 @@ def setup_lidar(args):
 
     VIRIDIS = np.array(cm.get_cmap('viridis').colors)
     VID_RANGE = np.linspace(0.0, 1.0, VIRIDIS.shape[0])
+    print(K)
 
     return (image_queue, lidar_queue,
             lidar, camera,
@@ -637,7 +680,7 @@ def read_lidar(args, frame,
             im_array[
                 v_coord[i]-args.dot_extent : v_coord[i]+args.dot_extent,
                 u_coord[i]-args.dot_extent : u_coord[i]+args.dot_extent] = color_map[i]
-
+    
     return im_array, p_cloud, image
 
 
@@ -685,6 +728,14 @@ def get_image_point(point_lidar, K):
     return point_img[0:2]
 
 
+def filter_actors_by_type(actor_list, desired_types):
+    filtered_actors = []
+    for actor in actor_list:
+        if actor.type_id in desired_types:
+            filtered_actors.append(actor)
+    return filtered_actors
+
+
 def get_bounding_boxes(im_array,
                         image_queue, lidar_queue,
                         lidar, camera,
@@ -704,9 +755,16 @@ def get_bounding_boxes(im_array,
     objects_verts, objects_bb, objects_labels = [], [], []
 
     pedestrians = list(world.get_actors().filter('walker.pedestrian.*'))
-    vehicles = list(world.get_actors().filter('vehicle.*'))
-    objects = pedestrians + vehicles
-    objects_types = len(pedestrians)*['Pedestrian'] + len(vehicles)*['Car']
+    cars = filter_actors_by_type(world.get_actors(), cars_ids)
+    motorcycles = filter_actors_by_type(world.get_actors(), motorcycles_ids)
+    bicycles = filter_actors_by_type(world.get_actors(), bicycles_ids)
+
+    objects = pedestrians + cars + motorcycles + bicycles
+    objects_types = \
+        len(pedestrians)*['Pedestrian'] + \
+        len(cars)*['Car'] + \
+        len(motorcycles)*['Motorcycle'] + \
+        len(bicycles)*['Bicycle']
 
     for object, o_type in zip(objects, objects_types):
         bb = object.bounding_box
@@ -732,6 +790,37 @@ def get_bounding_boxes(im_array,
 
     return objects_verts, objects_bb, objects_labels  
 
+def transform_to_2d(im_array, pedestrians_verts,
+                    image_queue, lidar_queue,
+                    lidar, camera,
+                    K,
+                    image_w, image_h,
+                    VID_RANGE, VIRIDIS):
+    bounding_boxes = []
+    for verts in pedestrians_verts:
+        x_max = -10000
+        x_min = 10000
+        y_max = -10000
+        y_min = 10000
+        for vert in verts:
+            p = get_image_point(vert, K)
+            if p[0] > x_max:
+                x_max = p[0]
+            if p[0] < x_min:
+                x_min = p[0]
+            if p[1] > y_max:
+                y_max = p[1]
+            if p[1] < y_min:
+                y_min = p[1]
+        if x_min > -10 and x_max < 1.05*image_w and y_min > -10 and y_max < 1.05*image_h:
+            x_min = max(0, x_min)
+            x_max = min(image_w, x_max)
+            y_min = max(0, y_min)
+            y_max = min(image_h, y_max)
+            bounding_boxes.append([int(x_min), int(x_max), int(y_min), int(y_max)])
+        else:
+            bounding_boxes.append(None)
+    return bounding_boxes
 
 def draw_bounding_boxes(im_array, pedestrians_verts,
                         image_queue, lidar_queue,
@@ -747,14 +836,31 @@ def draw_bounding_boxes(im_array, pedestrians_verts,
 
     im_array = im_array.copy().astype('uint8')
 
-    #world_2_lidar = np.array(lidar.get_transform().get_inverse_matrix())
+    world_2_camera = np.array(lidar.get_transform().get_inverse_matrix())
 
     for verts in pedestrians_verts:
-        #verts_lidar = [to_other_coordinate(v, world_2_lidar) for v in verts]
-        for edge in edges:
-            p1 = get_image_point(verts[edge[0]], K)
-            p2 = get_image_point(verts[edge[1]],  K)
-            cv2.line(im_array, (int(p1[0]),int(p1[1])), (int(p2[0]),int(p2[1])), (0,0,255), 1)
+        x_max = -10000
+        x_min = 10000
+        y_max = -10000
+        y_min = 10000
+        for vert in verts:
+            p = get_image_point(vert, K)
+            if p[0] > x_max:
+                x_max = p[0]
+            if p[0] < x_min:
+                x_min = p[0]
+            if p[1] > y_max:
+                y_max = p[1]
+            if p[1] < y_min:
+                y_min = p[1]
+        cv2.line(im_array, (int(x_min),int(y_min)), (int(x_max),int(y_min)), (0,0,255, 255), 1)
+        cv2.line(im_array, (int(x_min),int(y_max)), (int(x_max),int(y_max)), (0,0,255, 255), 1)
+        cv2.line(im_array, (int(x_min),int(y_min)), (int(x_min),int(y_max)), (0,0,255, 255), 1)
+        cv2.line(im_array, (int(x_max),int(y_min)), (int(x_max),int(y_max)), (0,0,255, 255), 1)
+        #for edge in edges:
+        #    p1 = get_image_point(verts[edge[0]], K)
+        #    p2 = get_image_point(verts[edge[1]],  K)
+        #    cv2.line(im_array, (int(p1[0]),int(p1[1])), (int(p2[0]),int(p2[1])), (0,0,255), 1)
 
     return im_array
 
@@ -781,16 +887,17 @@ def save_frame(frame, im_array):
 
 def create_dataset_dir(name):
     os.mkdir(f'./{name}')
-    #os.mkdir(f'./{name}/images/')
+    os.mkdir(f'./{name}/images/')
     os.mkdir(f'./{name}/points/')
     os.mkdir(f'./{name}/labels/')
+    os.mkdir(f'./{name}/image-labels/')
     #os.mkdir(f'./{name}/labels2/')
     os.mkdir(f'./{name}/ImageSets/')
     #with open(f'./{name}/ImageSets/train.txt', 'w') as fp:
     #    fp.write('teste')
 
 
-def store_in_dataset(frame, name, image, p_cloud, objects, objects_labels,
+def store_in_dataset(frame, name, image, p_cloud, objects, objects_bb_2d, objects_labels,
                      image_queue, lidar_queue,
                      lidar, camera,
                      K,
@@ -804,7 +911,9 @@ def store_in_dataset(frame, name, image, p_cloud, objects, objects_labels,
         ).get_inverse_matrix()
     )
 
-    #cv2.imwrite(f'./{name}/images/{frame:06d}.png', image)
+    cv2.imwrite(f'./{name}/images/{frame:06d}.png', 
+        cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    )
     p_cloud = transform_point_cloud(p_cloud)
     np.save(f'./{name}/points/{frame:06d}.npy', p_cloud)
     with open(f'./{name}/labels/{frame:06d}.txt', 'w') as fp:
@@ -823,6 +932,15 @@ def store_in_dataset(frame, name, image, p_cloud, objects, objects_labels,
                 '\n'
             ]
             fp.write(' '.join(map(str, bb_values)))
+    with open(f'./{name}/image-labels/{frame:06d}.txt', 'w') as fp:
+        for o, ol in zip(objects_bb_2d, objects_labels):
+            if o is not None:
+                bb_values = [
+                    o[0], o[1], o[2], o[3],
+                    ol,
+                    '\n'
+                ]
+                fp.write(' '.join(map(str, bb_values)))
     #np.save(f'./{name}/labels2/{frame:06d}.npy', np.array(pedestrians_bb)[:, [2, 6]])
     with open(f'./{name}/ImageSets/train.txt', 'a') as fp:
         fp.write(f'{frame:06d}\n')
@@ -845,10 +963,11 @@ def main():
             update_npcs_path(*npcs_info)
             if im_array is not None:
                 objects_verts, objects_bb, objects_labels = get_bounding_boxes(im_array, *lidar_info)
+                objects_bb_2d = transform_to_2d(im_array, objects_verts, *lidar_info)
                 im_array = draw_bounding_boxes(im_array, objects_verts, *lidar_info)
                 show_frame(im_array)
                 save_frame(frame, im_array)
-                store_in_dataset(frame, name, image, p_cloud, objects_bb, objects_labels, *lidar_info)
+                store_in_dataset(frame, name, image, p_cloud, objects_bb, objects_bb_2d, objects_labels, *lidar_info)
             frame += 1
     finally:
         delete_lidar(args, frame, *lidar_info)
