@@ -390,21 +390,20 @@ def spawn_crossing_npcs(args):
     destination_actors = []
     world.set_pedestrians_cross_factor(percentagePedestriansCrossing)
     for i in range(0, len(all_id), 2):
-        # start walker
+        # Inicializa ator
         all_actors[i].start()
-        # set walk to random point
-        # all_actors[i].go_to_location(world.get_random_location_from_navigation())
-        #print(world.get_random_location_from_navigation())
+        # Pega atual posiçãot
         current_location = all_actors[i].get_location()
         
         if current_location.x > 0:
+            # Defini o destino do ator como destino1, caso posição x seja positiva
             all_actors[i].go_to_location(destination1)
             destination_actors.append(destination1)
         elif current_location.x <= 0:
+            # Defini o destino do ator como destino1, caso posição x seja negativa
             all_actors[i].go_to_location(destination2)
             destination_actors.append(destination2)
         destination_actors.append(None)
-        #all_actors[i].go_to_location(destination1)
         # max speed
         all_actors[i].set_max_speed(float(walker_speed[int(i/2)]))
 
