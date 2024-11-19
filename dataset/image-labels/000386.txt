@@ -1,0 +1,10 @@
+0 44 161 214 Pedestrian 
+433 455 145 195 Pedestrian 
+613 655 152 204 Pedestrian 
+287 303 152 203 Pedestrian 
+540 576 158 210 Pedestrian 
+136 148 32 53 Pedestrian 
+438 457 168 205 Pedestrian 
+29 64 168 206 Pedestrian 
+229 289 45 68 Vehicle 
+218 251 58 77 Vehicle 

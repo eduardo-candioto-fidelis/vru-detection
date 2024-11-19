@@ -1,0 +1,5 @@
+576 606 161 198 Pedestrian 
+379 395 159 211 Pedestrian 
+317 329 158 193 Pedestrian 
+430 454 158 210 Pedestrian 
+613 658 157 209 Pedestrian 

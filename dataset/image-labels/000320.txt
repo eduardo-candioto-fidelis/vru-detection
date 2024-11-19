@@ -1,0 +1,9 @@
+43 77 154 186 Pedestrian 
+279 295 149 199 Pedestrian 
+250 270 159 212 Pedestrian 
+60 102 160 213 Pedestrian 
+86 105 92 117 Pedestrian 
+596 632 172 206 Pedestrian 
+536 609 45 68 Vehicle 
+587 680 71 105 Vehicle 
+561 601 57 76 Vehicle 

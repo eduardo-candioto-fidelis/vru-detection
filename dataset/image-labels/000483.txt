@@ -1,0 +1,5 @@
+541 568 160 196 Pedestrian 
+433 456 158 210 Pedestrian 
+288 301 158 194 Pedestrian 
+488 519 157 209 Pedestrian 
+632 677 148 200 Pedestrian 

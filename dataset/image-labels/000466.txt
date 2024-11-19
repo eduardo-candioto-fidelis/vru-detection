@@ -1,0 +1,6 @@
+83 119 150 201 Pedestrian 
+189 215 156 208 Pedestrian 
+421 438 159 194 Pedestrian 
+662 680 174 213 Pedestrian 
+233 255 160 212 Pedestrian 
+443 465 153 205 Pedestrian 

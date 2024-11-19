@@ -1,0 +1,8 @@
+504 537 157 210 Pedestrian 
+532 564 144 194 Pedestrian 
+198 224 151 202 Pedestrian 
+484 510 157 211 Pedestrian 
+160 171 35 57 Pedestrian 
+395 411 166 202 Pedestrian 
+252 311 45 68 Vehicle 
+251 282 58 77 Vehicle 

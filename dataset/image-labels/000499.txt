@@ -1,0 +1,7 @@
+610 650 178 214 Pedestrian 
+420 438 157 193 Pedestrian 
+594 634 150 201 Pedestrian 
+152 176 165 201 Pedestrian 
+623 667 155 207 Pedestrian 
+105 142 158 211 Pedestrian 
+625 669 148 199 Pedestrian 

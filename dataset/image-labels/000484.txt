@@ -1,0 +1,5 @@
+532 558 159 195 Pedestrian 
+446 471 158 210 Pedestrian 
+280 294 159 194 Pedestrian 
+503 534 157 209 Pedestrian 
+649 680 150 204 Pedestrian 

@@ -1,0 +1,10 @@
+468 495 178 212 Pedestrian 
+158 187 145 196 Pedestrian 
+138 148 38 53 Pedestrian 
+108 141 148 199 Pedestrian 
+16 52 170 208 Pedestrian 
+200 221 165 202 Pedestrian 
+360 372 163 200 Pedestrian 
+164 190 136 183 Pedestrian 
+440 502 53 77 Vehicle 
+442 507 45 68 Vehicle 

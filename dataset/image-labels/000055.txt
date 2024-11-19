@@ -1,0 +1,7 @@
+549 587 158 210 Pedestrian 
+492 522 152 203 Pedestrian 
+126 139 62 81 Pedestrian 
+185 208 137 187 Pedestrian 
+505 517 67 87 Pedestrian 
+568 644 45 68 Vehicle 
+519 600 51 77 Vehicle 

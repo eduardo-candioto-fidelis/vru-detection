@@ -1,0 +1,5 @@
+48 88 152 204 Pedestrian 
+222 245 157 208 Pedestrian 
+404 420 159 194 Pedestrian 
+265 284 160 212 Pedestrian 
+469 496 153 205 Pedestrian 

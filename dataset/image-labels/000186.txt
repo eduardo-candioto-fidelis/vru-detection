@@ -1,0 +1,10 @@
+452 477 178 213 Pedestrian 
+125 158 146 197 Pedestrian 
+132 142 38 53 Pedestrian 
+78 115 150 201 Pedestrian 
+0 36 172 210 Pedestrian 
+215 234 165 201 Pedestrian 
+377 391 163 199 Pedestrian 
+132 160 137 185 Pedestrian 
+451 515 53 77 Vehicle 
+452 517 45 68 Vehicle 

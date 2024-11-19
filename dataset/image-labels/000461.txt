@@ -1,0 +1,7 @@
+158 188 149 201 Pedestrian 
+107 143 156 208 Pedestrian 
+464 484 161 197 Pedestrian 
+621 657 163 200 Pedestrian 
+150 182 160 212 Pedestrian 
+378 392 149 199 Pedestrian 
+2 49 156 208 Pedestrian 

@@ -1,0 +1,9 @@
+308 321 152 203 Pedestrian 
+552 580 165 202 Pedestrian 
+555 586 173 211 Pedestrian 
+10 50 149 201 Pedestrian 
+106 142 155 208 Pedestrian 
+90 124 155 209 Pedestrian 
+235 255 144 194 Pedestrian 
+145 178 156 209 Pedestrian 
+510 631 88 128 Vehicle 

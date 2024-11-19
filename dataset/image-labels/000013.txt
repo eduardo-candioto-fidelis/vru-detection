@@ -1,0 +1,7 @@
+133 143 38 52 Pedestrian 
+633 678 156 210 Pedestrian 
+499 507 42 57 Pedestrian 
+468 613 76 128 Vehicle 
+216 285 98 177 Vehicle 
+591 669 45 68 Vehicle 
+616 680 52 77 Vehicle 

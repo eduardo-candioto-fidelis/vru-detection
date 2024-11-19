@@ -1,0 +1,4 @@
+483 505 157 193 Pedestrian 
+525 559 157 209 Pedestrian 
+228 246 161 197 Pedestrian 
+588 630 156 208 Pedestrian 

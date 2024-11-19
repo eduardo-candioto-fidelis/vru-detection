@@ -1,0 +1,5 @@
+596 627 163 201 Pedestrian 
+351 364 159 211 Pedestrian 
+332 343 158 194 Pedestrian 
+401 421 158 211 Pedestrian 
+590 632 156 208 Pedestrian 

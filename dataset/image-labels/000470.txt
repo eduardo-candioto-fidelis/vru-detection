@@ -1,0 +1,6 @@
+12 57 155 207 Pedestrian 
+668 680 168 208 Pedestrian 
+254 273 157 208 Pedestrian 
+387 402 159 195 Pedestrian 
+296 312 160 212 Pedestrian 
+496 526 153 205 Pedestrian 

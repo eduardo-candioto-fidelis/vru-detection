@@ -1,0 +1,15 @@
+657 680 170 207 Pedestrian 
+443 467 147 199 Pedestrian 
+34 77 152 203 Pedestrian 
+147 157 49 66 Pedestrian 
+227 247 145 195 Pedestrian 
+203 225 150 201 Pedestrian 
+425 447 146 196 Pedestrian 
+35 48 38 52 Pedestrian 
+238 256 165 201 Pedestrian 
+439 466 158 212 Pedestrian 
+72 105 176 214 Pedestrian 
+150 177 175 213 Pedestrian 
+465 489 140 189 Pedestrian 
+301 355 53 78 Vehicle 
+319 375 45 68 Vehicle 

@@ -1,0 +1,8 @@
+489 519 149 201 Pedestrian 
+558 592 146 197 Pedestrian 
+227 250 151 202 Pedestrian 
+489 518 157 210 Pedestrian 
+163 173 32 53 Pedestrian 
+410 426 167 204 Pedestrian 
+245 304 45 68 Vehicle 
+240 272 58 77 Vehicle 

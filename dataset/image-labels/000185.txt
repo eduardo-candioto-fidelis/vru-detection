@@ -1,0 +1,9 @@
+445 469 178 213 Pedestrian 
+110 143 145 196 Pedestrian 
+129 139 38 53 Pedestrian 
+63 102 151 202 Pedestrian 
+223 242 164 200 Pedestrian 
+385 399 163 199 Pedestrian 
+121 150 138 186 Pedestrian 
+457 521 53 77 Vehicle 
+457 523 45 68 Vehicle 

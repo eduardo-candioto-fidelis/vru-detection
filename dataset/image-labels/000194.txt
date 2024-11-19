@@ -1,0 +1,12 @@
+520 552 178 212 Pedestrian 
+234 255 146 196 Pedestrian 
+156 164 38 52 Pedestrian 
+0 41 156 210 Pedestrian 
+195 220 147 197 Pedestrian 
+71 103 168 205 Pedestrian 
+607 651 154 206 Pedestrian 
+145 169 173 212 Pedestrian 
+314 327 166 203 Pedestrian 
+241 260 135 182 Pedestrian 
+406 466 53 77 Vehicle 
+412 474 45 68 Vehicle 

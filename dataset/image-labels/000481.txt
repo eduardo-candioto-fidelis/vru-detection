@@ -1,0 +1,5 @@
+558 587 160 197 Pedestrian 
+405 426 159 211 Pedestrian 
+303 315 158 193 Pedestrian 
+459 487 157 210 Pedestrian 
+611 650 152 205 Pedestrian 

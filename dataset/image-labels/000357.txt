@@ -1,0 +1,6 @@
+262 280 141 190 Pedestrian 
+204 232 160 215 Pedestrian 
+110 128 60 89 Pedestrian 
+224 244 165 201 Pedestrian 
+363 420 45 68 Vehicle 
+363 392 58 76 Vehicle 

@@ -1,0 +1,13 @@
+594 632 177 211 Pedestrian 
+381 399 149 201 Pedestrian 
+154 163 45 61 Pedestrian 
+139 170 152 203 Pedestrian 
+112 146 153 205 Pedestrian 
+353 366 149 199 Pedestrian 
+175 198 165 201 Pedestrian 
+461 484 150 202 Pedestrian 
+127 155 176 214 Pedestrian 
+217 237 173 210 Pedestrian 
+377 391 136 184 Pedestrian 
+344 398 53 78 Vehicle 
+356 413 45 68 Vehicle 

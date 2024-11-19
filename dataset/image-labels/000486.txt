@@ -1,0 +1,4 @@
+515 539 158 194 Pedestrian 
+472 500 157 209 Pedestrian 
+265 279 159 195 Pedestrian 
+531 566 157 209 Pedestrian 

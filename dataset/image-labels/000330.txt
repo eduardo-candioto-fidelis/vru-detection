@@ -1,0 +1,6 @@
+403 421 151 201 Pedestrian 
+101 138 161 214 Pedestrian 
+0 36 172 210 Pedestrian 
+56 80 109 136 Pedestrian 
+496 565 45 68 Vehicle 
+510 546 57 76 Vehicle 

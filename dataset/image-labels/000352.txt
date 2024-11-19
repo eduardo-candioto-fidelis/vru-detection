@@ -1,0 +1,8 @@
+663 680 155 211 Pedestrian 
+199 222 141 190 Pedestrian 
+120 155 155 209 Pedestrian 
+1 48 160 214 Pedestrian 
+93 114 69 101 Pedestrian 
+182 205 164 200 Pedestrian 
+388 448 45 68 Vehicle 
+390 421 58 76 Vehicle 

@@ -1,0 +1,5 @@
+614 648 166 204 Pedestrian 
+324 337 157 210 Pedestrian 
+349 360 159 194 Pedestrian 
+371 389 158 211 Pedestrian 
+565 603 155 207 Pedestrian 

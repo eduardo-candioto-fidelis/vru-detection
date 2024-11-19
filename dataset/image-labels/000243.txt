@@ -1,0 +1,13 @@
+619 659 175 209 Pedestrian 
+456 478 149 200 Pedestrian 
+117 132 72 93 Pedestrian 
+598 639 149 200 Pedestrian 
+584 621 149 201 Pedestrian 
+542 573 172 210 Pedestrian 
+135 145 39 53 Pedestrian 
+468 490 170 208 Pedestrian 
+32 76 159 211 Pedestrian 
+0 35 171 207 Pedestrian 
+47 138 73 108 Vehicle 
+178 240 54 78 Vehicle 
+166 232 46 69 Vehicle 

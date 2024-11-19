@@ -1,0 +1,9 @@
+579 619 153 204 Pedestrian 
+104 137 146 196 Pedestrian 
+67 106 156 209 Pedestrian 
+67 106 164 220 Pedestrian 
+59 85 87 123 Pedestrian 
+122 149 164 200 Pedestrian 
+13 44 134 166 Pedestrian 
+428 492 45 68 Vehicle 
+434 467 58 76 Vehicle 

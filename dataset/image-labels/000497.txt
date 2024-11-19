@@ -1,0 +1,7 @@
+622 662 176 211 Pedestrian 
+434 452 157 192 Pedestrian 
+604 643 151 204 Pedestrian 
+167 191 164 200 Pedestrian 
+641 680 155 209 Pedestrian 
+77 117 158 210 Pedestrian 
+617 661 151 202 Pedestrian 

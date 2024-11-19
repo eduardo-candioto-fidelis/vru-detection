@@ -1,4 +1,3 @@
-dataset/
 OpenPCDet/data/custom/
 __pycache__
 *.zip

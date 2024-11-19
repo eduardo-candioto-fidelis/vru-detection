@@ -1,0 +1,6 @@
+100 134 149 200 Pedestrian 
+172 201 157 209 Pedestrian 
+430 447 159 195 Pedestrian 
+658 680 170 209 Pedestrian 
+218 241 160 212 Pedestrian 
+430 450 152 204 Pedestrian 
